@@ -35,8 +35,8 @@ LANGS = {
         "sc_lockdown": "Lockdown (50% reduction)",
         "sc_vacc": "Mass Vaccination (5x rate)",
         "data_fitting": "Real Data Fitting",
-        "upload": "Upload Historical Data (CSV)",
-        "csv_info": "CSV must contain 'Day' and 'Infected' columns.",
+        "upload": "Upload Historical Data (CSV / Excel)",
+        "csv_info": "Uploaded file must contain 'Day' and 'Infected' columns.",
         "fit_btn": "Calculate Best Fit",
         "success": "Data loaded successfully.",
         "best_params": "Best parameters found",
@@ -109,8 +109,8 @@ LANGS = {
         "sc_lockdown": "Lokatun (50% kamayish)",
         "sc_vacc": "Ommaviy emlash (5x tezlik)",
         "data_fitting": "Haqiqiy ma'lumotlarga moslash",
-        "upload": "Tarixiy ma'lumotlarni yuklash (CSV)",
-        "csv_info": "CSV faylda 'Day' va 'Infected' ustunlari bo'lishi kerak.",
+        "upload": "Tarixiy ma'lumotlarni yuklash (CSV / Excel)",
+        "csv_info": "Yuklangan faylda 'Day' va 'Infected' ustunlari bo'lishi kerak.",
         "fit_btn": "Eng yaxshi moslikni hisoblash",
         "success": "Ma'lumotlar muvaffaqiyatli yuklandi.",
         "best_params": "Eng mos parametrlar topildi",
@@ -183,8 +183,8 @@ LANGS = {
         "sc_lockdown": "Локдаун (снижение на 50%)",
         "sc_vacc": "Массовая вакцинация (5x скорость)",
         "data_fitting": "Подбор под реальные данные",
-        "upload": "Загрузить данные (CSV)",
-        "csv_info": "CSV должен содержать столбцы 'Day' и 'Infected'.",
+        "upload": "Загрузить данные (CSV / Excel)",
+        "csv_info": "Загруженный файл должен содержать столбцы 'Day' и 'Infected'.",
         "fit_btn": "Рассчитать параметры",
         "success": "Данные успешно загружены.",
         "best_params": "Найдены оптимальные параметры",
@@ -231,7 +231,6 @@ LANGS = {
     }
 }
 
-# Page Config — must be the first Streamlit command
 st.set_page_config(page_title="SEIRV Epidemic Simulator", layout="wide")
 
 # Language Selector
@@ -450,20 +449,27 @@ with tab3:
             <span style="color: #e0e0e0;">{t_['data_intro_text']}</span>
         </div>
     """, unsafe_allow_html=True)
-    file = st.file_uploader(t_["upload"], type="csv")
+    file = st.file_uploader(t_["upload"], type=["csv", "xlsx", "xls"])
     if file:
-        data = pd.read_csv(file)
-        if validate_data_columns(data):
-            st.success(t_["success"])
-            if st.button(t_["fit_btn"]):
-                with st.spinner(t_["calc"]):
-                    b_fit, g_fit = fit_parameters(data['Day'].values, data['Infected'].values, N, E0, I0, 0, 0, sigma, nu)
-                    st.write(f"**{t_['best_params']}:** β={b_fit:.4f}, γ={g_fit:.4f}")
-                    t_f, (_, _, I_f, _, _) = run_simulation(N, E0, I0, 0, 0, b_fit, sigma, g_fit, nu, int(data['Day'].max()))
-                    
-                    fig_f = go.Figure()
-                    fig_f.add_trace(go.Scatter(x=data['Day'], y=data['Infected'], mode='markers', name=t_["actual"]))
-                    fig_f.add_trace(go.Scatter(x=t_f, y=I_f, name=t_["fit_model"], line=dict(color='red')))
-                    st.plotly_chart(fig_f, use_container_width=True)
-        else:
-            st.error(t_["csv_info"])
+        try:
+            if file.name.endswith(('.xlsx', '.xls')):
+                data = pd.read_excel(file)
+            else:
+                data = pd.read_csv(file)
+            
+            if validate_data_columns(data):
+                st.success(t_["success"])
+                if st.button(t_["fit_btn"]):
+                    with st.spinner(t_["calc"]):
+                        b_fit, g_fit = fit_parameters(data['Day'].values, data['Infected'].values, N, E0, I0, 0, 0, sigma, nu)
+                        st.write(f"**{t_['best_params']}:** β={b_fit:.4f}, γ={g_fit:.4f}")
+                        t_f, (_, _, I_f, _, _) = run_simulation(N, E0, I0, 0, 0, b_fit, sigma, g_fit, nu, int(data['Day'].max()))
+                        
+                        fig_f = go.Figure()
+                        fig_f.add_trace(go.Scatter(x=data['Day'], y=data['Infected'], mode='markers', name=t_["actual"]))
+                        fig_f.add_trace(go.Scatter(x=t_f, y=I_f, name=t_["fit_model"], line=dict(color='red')))
+                        st.plotly_chart(fig_f, use_container_width=True)
+            else:
+                st.error(t_["csv_info"])
+        except Exception as e:
+            st.error(f"Faylni o'qishda xatolik yuz berdi: {e}" if lang_choice == "O'zbekcha" else f"Error reading file: {e}" if lang_choice == "English" else f"Ошибка чтения файла: {e}")

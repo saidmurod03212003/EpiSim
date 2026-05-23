@@ -4,3 +4,4 @@ scipy
 plotly
 pandas
 scikit-learn
+openpyxl
